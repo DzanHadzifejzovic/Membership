@@ -14,10 +14,18 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { FamilyInfoDialog } from '@/components/FamilyInfoDialog'
 import { createMember, updateMember } from '@/firebase/members'
+import { useYearRange } from '@/hooks/useYearRange'
+import { COUNTRY_CODES, DEFAULT_DIAL_CODE, splitPhone } from '@/lib/countryCodes'
 import {
-  YEARS,
   buildSearchKey,
   emptyPayments,
   type FamilyInfo,
@@ -49,10 +57,12 @@ export function MemberFormDialog({
   onEditExisting,
 }: MemberFormDialogProps) {
   const isEditing = member != null
+  const { years } = useYearRange()
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [phone, setPhone] = useState('')
+  const [phoneDialCode, setPhoneDialCode] = useState(DEFAULT_DIAL_CODE)
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [address, setAddress] = useState('')
   const [joinDate, setJoinDate] = useState(todayIso())
   const [payments, setPayments] = useState<Record<string, string>>(() =>
@@ -69,13 +79,15 @@ export function MemberFormDialog({
     if (member) {
       setFirstName(member.firstName)
       setLastName(member.lastName)
-      setPhone(member.phone)
+      const { dialCode, number } = splitPhone(member.phone)
+      setPhoneDialCode(dialCode)
+      setPhoneNumber(number)
       setAddress(member.address)
       setJoinDate(member.joinDate || todayIso())
       setFamilyInfo(member.familyInfo ?? {})
       setPayments(
         Object.fromEntries(
-          YEARS.map((y) => [
+          years.map((y) => [
             String(y),
             member.payments?.[String(y)]
               ? String(member.payments[String(y)])
@@ -86,13 +98,14 @@ export function MemberFormDialog({
     } else {
       setFirstName('')
       setLastName('')
-      setPhone('')
+      setPhoneDialCode(DEFAULT_DIAL_CODE)
+      setPhoneNumber('')
       setAddress('')
       setJoinDate(todayIso())
       setFamilyInfo({})
-      setPayments(Object.fromEntries(YEARS.map((y) => [String(y), ''])))
+      setPayments(Object.fromEntries(years.map((y) => [String(y), ''])))
     }
-  }, [open, member])
+  }, [open, member, years])
 
   const duplicate = useMemo(() => {
     if (isEditing) return null
@@ -120,7 +133,7 @@ export function MemberFormDialog({
     const input: MemberInput = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      phone: phone.trim(),
+      phone: phoneNumber.trim() ? `${phoneDialCode} ${phoneNumber.trim()}` : '',
       address: address.trim(),
       joinDate,
       payments: paymentMap,
@@ -152,8 +165,8 @@ export function MemberFormDialog({
             {isEditing ? 'Uredi člana' : 'Dodaj novog člana'}
           </DialogTitle>
           <DialogDescription>
-            Podaci o članu i cijela tabela članarina ({YEARS[0]}–
-            {YEARS[YEARS.length - 1]}) se čuvaju zajedno.
+            Podaci o članu i cijela tabela članarina ({years[0]}–
+            {years[years.length - 1]}) se čuvaju zajedno.
           </DialogDescription>
         </DialogHeader>
 
@@ -196,11 +209,39 @@ export function MemberFormDialog({
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="phone">Telefon</Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Select
+                  value={phoneDialCode}
+                  onValueChange={(v) => v && setPhoneDialCode(v)}
+                >
+                  <SelectTrigger className="w-28 shrink-0">
+                    <SelectValue>
+                      {(value: string) => {
+                        const country = COUNTRY_CODES.find(
+                          (c) => c.dialCode === value,
+                        )
+                        return country
+                          ? `${country.flag} ${country.dialCode}`
+                          : value
+                      }}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRY_CODES.map((c) => (
+                      <SelectItem key={c.dialCode + c.name} value={c.dialCode}>
+                        {c.flag} {c.dialCode}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="phone"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="79 123 45 67"
+                  className="flex-1"
+                />
+              </div>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="address">Adresa</Label>
@@ -252,7 +293,7 @@ export function MemberFormDialog({
               Članarina po godinama (iznos)
             </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {YEARS.map((year) => (
+              {years.map((year) => (
                 <div key={year} className="flex flex-col gap-1">
                   <Label htmlFor={`year-${year}`} className="text-xs text-muted-foreground">
                     {year}

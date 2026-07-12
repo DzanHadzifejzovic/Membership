@@ -1,10 +1,18 @@
 export const FIRST_YEAR = 2015
-export const LAST_YEAR = 2030
+// Default upper bound, used until an admin extends it (see useYearRange /
+// meta/settings). Membership fees can be issued past this year once
+// extended — this constant is only the starting default.
+export const DEFAULT_LAST_YEAR = 2030
 
-export const YEARS: number[] = Array.from(
-  { length: LAST_YEAR - FIRST_YEAR + 1 },
-  (_, i) => FIRST_YEAR + i,
-)
+export function buildYears(lastYear: number): number[] {
+  return Array.from(
+    { length: lastYear - FIRST_YEAR + 1 },
+    (_, i) => FIRST_YEAR + i,
+  )
+}
+
+// Fallback range for code paths that run before the live setting loads.
+export const YEARS: number[] = buildYears(DEFAULT_LAST_YEAR)
 
 // Keyed by year as string (Firestore map keys must be strings), value is the
 // amount (iznos) paid for that year. A missing/0 entry means unpaid.

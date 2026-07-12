@@ -90,7 +90,7 @@ export default function Login() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" disabled={submitting} className="mt-2">
-              {submitting ? 'Prijavljivanje...' : 'Prijavi se'}
+              {submitting ? 'Logging in...' : 'Log in'}
             </Button>
           </form>
         </CardContent>

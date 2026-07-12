@@ -32,16 +32,19 @@ import {
 } from '@/components/ui/alert-dialog'
 import { MemberFormDialog } from '@/components/MemberFormDialog'
 import { PrintLayout } from '@/components/PrintLayout'
+import { ExtendYearRangeDialog } from '@/components/ExtendYearRangeDialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMembers } from '@/hooks/useMembers'
+import { useYearRange } from '@/hooks/useYearRange'
 import { softDeleteMember } from '@/firebase/members'
-import { YEARS, paidYearCount, totalPaid, type Member } from '@/types/member'
+import { FIRST_YEAR, paidYearCount, totalPaid, type Member } from '@/types/member'
 
 const DEFAULT_MOSQUE_NAME = 'Džamija Nur'
 
 export default function Dashboard() {
   const { signOut } = useAuth()
   const { members, loading, error } = useMembers()
+  const { years, lastYear } = useYearRange()
 
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -49,10 +52,11 @@ export default function Dashboard() {
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [extendDialogOpen, setExtendDialogOpen] = useState(false)
 
   const [mosqueName, setMosqueName] = useState(DEFAULT_MOSQUE_NAME)
-  const [yearFrom, setYearFrom] = useState(String(YEARS[YEARS.length - 6]))
-  const [yearTo, setYearTo] = useState(String(YEARS[YEARS.length - 1]))
+  const [yearFrom, setYearFrom] = useState(String(years[years.length - 6]))
+  const [yearTo, setYearTo] = useState(String(years[years.length - 1]))
   const [cardsPerPage, setCardsPerPage] = useState<'4' | '6' | '8'>('8')
 
   const filteredMembers = useMemo(() => {
@@ -141,7 +145,7 @@ export default function Dashboard() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <h1 className="text-lg font-semibold">Evidencija članarina</h1>
           <Button variant="outline" onClick={signOut}>
-            Odjava
+            Log out
           </Button>
         </div>
       </header>
@@ -155,6 +159,24 @@ export default function Dashboard() {
             className="sm:max-w-xs"
           />
           <Button onClick={openNewMemberDialog}>Dodaj novog člana</Button>
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4">
+          <div>
+            <p className="text-sm font-medium">Period članarine</p>
+            <p className="text-xs text-muted-foreground">
+              Trenutno se članarina može evidentirati od {FIRST_YEAR}. do{' '}
+              {lastYear}. godine.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setExtendDialogOpen(true)}
+          >
+            Produži period
+          </Button>
         </div>
 
         <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-background p-4">
@@ -176,7 +198,7 @@ export default function Dashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {YEARS.map((y) => (
+                {years.map((y) => (
                   <SelectItem key={y} value={String(y)}>
                     {y}
                   </SelectItem>
@@ -191,7 +213,7 @@ export default function Dashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {YEARS.map((y) => (
+                {years.map((y) => (
                   <SelectItem key={y} value={String(y)}>
                     {y}
                   </SelectItem>
@@ -290,7 +312,7 @@ export default function Dashboard() {
                   <TableCell>{member.joinDate || '—'}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">
-                      {paidYearCount(member.payments)} / {YEARS.length}
+                      {paidYearCount(member.payments)} / {years.length}
                     </Badge>
                   </TableCell>
                   <TableCell>{totalPaid(member.payments)}</TableCell>
@@ -359,6 +381,12 @@ export default function Dashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ExtendYearRangeDialog
+        open={extendDialogOpen}
+        onOpenChange={setExtendDialogOpen}
+        currentLastYear={lastYear}
+      />
     </div>
   )
 }
