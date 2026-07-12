@@ -10,24 +10,33 @@ export const YEARS: number[] = Array.from(
 // amount (iznos) paid for that year. A missing/0 entry means unpaid.
 export type PaymentMap = Record<string, number>
 
+export interface FamilyInfo {
+  memberCount?: number
+  ages?: string
+  phones?: string
+  notes?: string
+}
+
 export interface Member {
   id: string
   firstName: string
   lastName: string
   fullName: string
   searchKey: string
+  // Assigned automatically on creation (sequential), never user-editable.
   cardNumber: string
   phone: string
   address: string
   joinDate: string // ISO date string (yyyy-MM-dd)
   payments: PaymentMap
+  familyInfo?: FamilyInfo
   createdAt: number
   updatedAt: number
 }
 
 export type MemberInput = Omit<
   Member,
-  'id' | 'fullName' | 'searchKey' | 'createdAt' | 'updatedAt'
+  'id' | 'fullName' | 'searchKey' | 'cardNumber' | 'createdAt' | 'updatedAt'
 >
 
 export function emptyPayments(): PaymentMap {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
+import { Users } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -12,11 +13,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
+import { FamilyInfoDialog } from '@/components/FamilyInfoDialog'
 import { createMember, updateMember } from '@/firebase/members'
 import {
   YEARS,
   buildSearchKey,
   emptyPayments,
+  type FamilyInfo,
   type Member,
   type MemberInput,
 } from '@/types/member'
@@ -33,6 +37,10 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+function hasFamilyInfo(info: FamilyInfo): boolean {
+  return Boolean(info.memberCount || info.ages || info.phones || info.notes)
+}
+
 export function MemberFormDialog({
   open,
   onOpenChange,
@@ -44,7 +52,6 @@ export function MemberFormDialog({
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [cardNumber, setCardNumber] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [joinDate, setJoinDate] = useState(todayIso())
@@ -53,6 +60,8 @@ export function MemberFormDialog({
       Object.entries(emptyPayments()).map(([y, v]) => [y, v ? String(v) : '']),
     ),
   )
+  const [familyInfo, setFamilyInfo] = useState<FamilyInfo>({})
+  const [familyDialogOpen, setFamilyDialogOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -60,10 +69,10 @@ export function MemberFormDialog({
     if (member) {
       setFirstName(member.firstName)
       setLastName(member.lastName)
-      setCardNumber(member.cardNumber)
       setPhone(member.phone)
       setAddress(member.address)
       setJoinDate(member.joinDate || todayIso())
+      setFamilyInfo(member.familyInfo ?? {})
       setPayments(
         Object.fromEntries(
           YEARS.map((y) => [
@@ -77,10 +86,10 @@ export function MemberFormDialog({
     } else {
       setFirstName('')
       setLastName('')
-      setCardNumber('')
       setPhone('')
       setAddress('')
       setJoinDate(todayIso())
+      setFamilyInfo({})
       setPayments(Object.fromEntries(YEARS.map((y) => [String(y), ''])))
     }
   }, [open, member])
@@ -111,11 +120,11 @@ export function MemberFormDialog({
     const input: MemberInput = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      cardNumber: cardNumber.trim(),
       phone: phone.trim(),
       address: address.trim(),
       joinDate,
       payments: paymentMap,
+      ...(hasFamilyInfo(familyInfo) ? { familyInfo } : {}),
     }
 
     setSaving(true)
@@ -169,12 +178,12 @@ export function MemberFormDialog({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="cardNumber">Broj članske karte</Label>
-              <Input
-                id="cardNumber"
-                value={cardNumber}
-                onChange={(e) => setCardNumber(e.target.value)}
-              />
+              <Label>Broj članske karte</Label>
+              <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm text-muted-foreground">
+                {isEditing
+                  ? member.cardNumber
+                  : 'Biće automatski dodijeljen'}
+              </div>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="joinDate">Datum učlanjenja</Label>
@@ -220,6 +229,22 @@ export function MemberFormDialog({
             </div>
           )}
 
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setFamilyDialogOpen(true)}
+              className="gap-2"
+            >
+              <Users className="size-4" />
+              Podaci o porodici (opciono)
+              {hasFamilyInfo(familyInfo) && (
+                <Badge variant="secondary">Popunjeno</Badge>
+              )}
+            </Button>
+          </div>
+
           <Separator />
 
           <div>
@@ -258,6 +283,13 @@ export function MemberFormDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <FamilyInfoDialog
+        open={familyDialogOpen}
+        onOpenChange={setFamilyDialogOpen}
+        value={familyInfo}
+        onSave={setFamilyInfo}
+      />
     </Dialog>
   )
 }

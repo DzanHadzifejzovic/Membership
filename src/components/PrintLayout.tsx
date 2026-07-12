@@ -66,6 +66,9 @@ export function PrintLayout({
                       }
                     >
                       {year}
+                      {paid && (
+                        <span className="print-year-amount">{amount}</span>
+                      )}
                     </span>
                   )
                 })}

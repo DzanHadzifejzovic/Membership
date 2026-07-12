@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, type Auth } from 'firebase/auth'
-import { getFirestore, type Firestore } from 'firebase/firestore'
+import { initializeFirestore, type Firestore } from 'firebase/firestore'
 
 // ---------------------------------------------------------------------------
 // PASTE YOUR FIREBASE CONFIG HERE (or, preferably, set the VITE_FIREBASE_*
@@ -29,6 +29,9 @@ export const app = initializeApp(firebaseConfig)
 export const auth = isFirebaseConfigured
   ? getAuth(app)
   : (null as unknown as Auth)
+// Optional fields (e.g. family info) may be omitted by the caller as
+// `undefined` — ignoreUndefinedProperties lets Firestore drop those keys
+// instead of throwing.
 export const db = isFirebaseConfigured
-  ? getFirestore(app)
+  ? initializeFirestore(app, { ignoreUndefinedProperties: true })
   : (null as unknown as Firestore)
