@@ -1,10 +1,22 @@
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+import Login from '@/pages/Login'
+import Dashboard from '@/pages/Dashboard'
+
 function App() {
   return (
-    <div className="flex min-h-svh items-center justify-center">
-      <h1 className="text-2xl font-semibold text-foreground">
-        Mosque Membership — project scaffold ready
-      </h1>
-    </div>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 

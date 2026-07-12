@@ -128,3 +128,129 @@
     @apply font-sans;
     }
 }
+
+/* ---------------------------------------------------------------------- */
+/* Print layout — membership cards, 4/6/8 per A4 sheet                    */
+/* ---------------------------------------------------------------------- */
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #print-root,
+  #print-root * {
+    visibility: visible;
+  }
+
+  #print-root {
+    position: absolute;
+    inset: 0;
+  }
+}
+
+.print-page {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4mm;
+  width: 194mm;
+  height: 281mm;
+  page-break-after: always;
+}
+
+.print-page[data-cards='4'] {
+  grid-template-rows: repeat(2, 1fr);
+}
+
+.print-page[data-cards='6'] {
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.print-page[data-cards='8'] {
+  grid-template-rows: repeat(4, 1fr);
+}
+
+.print-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 0.5pt solid #999;
+  border-radius: 3mm;
+  padding: 4mm;
+  break-inside: avoid;
+  background: #fff;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+.print-card-header {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 0.5pt solid #ccc;
+  padding-bottom: 2mm;
+  margin-bottom: 2mm;
+}
+
+.print-card-mosque {
+  font-size: 9pt;
+  font-weight: 600;
+  letter-spacing: 0.3pt;
+  text-transform: uppercase;
+  color: #111;
+}
+
+.print-card-title {
+  font-size: 7pt;
+  color: #666;
+}
+
+.print-card-body {
+  flex: 1;
+}
+
+.print-card-name {
+  font-size: 12pt;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 1.5mm;
+}
+
+.print-card-meta {
+  display: flex;
+  flex-direction: column;
+  font-size: 7.5pt;
+  color: #444;
+  gap: 0.5mm;
+}
+
+.print-card-years {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1mm;
+  border-top: 0.5pt solid #ccc;
+  padding-top: 2mm;
+}
+
+.print-year-chip {
+  font-size: 6.5pt;
+  font-weight: 600;
+  padding: 0.6mm 1.4mm;
+  border-radius: 1.5mm;
+  border: 0.5pt solid transparent;
+}
+
+.print-year-paid {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.print-year-unpaid {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
