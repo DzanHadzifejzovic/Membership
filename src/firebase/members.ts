@@ -6,6 +6,7 @@ import {
   query,
   runTransaction,
   setDoc,
+  updateDoc,
 } from 'firebase/firestore'
 import { db } from '@/firebase/firebase'
 import {
@@ -83,4 +84,14 @@ export async function updateMember(
     searchKey: buildSearchKey(input.firstName, input.lastName),
     updatedAt: Date.now(),
   }, { merge: true })
+}
+
+// Soft delete: marks the member as deleted instead of removing the
+// document, so payment history is preserved. Hidden from the active list
+// by useMembers.
+export async function softDeleteMember(id: string): Promise<void> {
+  await updateDoc(doc(db, MEMBERS_COLLECTION, id), {
+    deleted: true,
+    deletedAt: Date.now(),
+  })
 }

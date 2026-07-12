@@ -178,7 +178,7 @@
 .print-card {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   border: 0.5pt solid #999;
   border-radius: 3mm;
   padding: 5mm;
@@ -191,12 +191,12 @@
   display: flex;
   flex-direction: column;
   border-bottom: 0.5pt solid #ccc;
-  padding-bottom: 2.5mm;
-  margin-bottom: 2.5mm;
+  padding-bottom: 3mm;
+  margin-bottom: 3mm;
 }
 
 .print-card-mosque {
-  font-size: 10.5pt;
+  font-size: 12.5pt;
   font-weight: 600;
   letter-spacing: 0.3pt;
   text-transform: uppercase;
@@ -204,51 +204,51 @@
 }
 
 .print-card-title {
-  font-size: 8pt;
+  font-size: 9pt;
   color: #666;
 }
 
 .print-card-body {
-  flex: 1;
+  margin-bottom: 3mm;
 }
 
 .print-card-name {
-  font-size: 14pt;
+  font-size: 17pt;
   font-weight: 700;
   color: #111;
-  margin-bottom: 2mm;
+  margin-bottom: 2.5mm;
 }
 
 .print-card-meta {
   display: flex;
   flex-direction: column;
-  font-size: 8.5pt;
+  font-size: 10pt;
   color: #444;
-  gap: 0.8mm;
+  gap: 1mm;
 }
 
 .print-card-years {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.4mm;
+  gap: 1.8mm;
   border-top: 0.5pt solid #ccc;
-  padding-top: 2.5mm;
+  padding-top: 3mm;
 }
 
 .print-year-chip {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 7.5pt;
+  font-size: 9pt;
   font-weight: 600;
-  padding: 1mm 1.8mm;
+  padding: 1.4mm 2.4mm;
   border-radius: 1.5mm;
   border: 0.5pt solid transparent;
   line-height: 1.3;
 }
 
 .print-year-amount {
-  font-size: 6.5pt;
+  font-size: 8pt;
   font-weight: 500;
 }
 

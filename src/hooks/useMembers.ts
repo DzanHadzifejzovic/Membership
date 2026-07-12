@@ -10,7 +10,7 @@ export function useMembers() {
   useEffect(() => {
     const unsubscribe = subscribeToMembers(
       (data) => {
-        setMembers(data)
+        setMembers(data.filter((m) => !m.deleted))
         setLoading(false)
       },
       (err) => {

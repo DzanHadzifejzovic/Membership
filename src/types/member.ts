@@ -32,11 +32,21 @@ export interface Member {
   familyInfo?: FamilyInfo
   createdAt: number
   updatedAt: number
+  // Soft delete — kept for audit/history, hidden from the active member list.
+  deleted?: boolean
+  deletedAt?: number
 }
 
 export type MemberInput = Omit<
   Member,
-  'id' | 'fullName' | 'searchKey' | 'cardNumber' | 'createdAt' | 'updatedAt'
+  | 'id'
+  | 'fullName'
+  | 'searchKey'
+  | 'cardNumber'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'deleted'
+  | 'deletedAt'
 >
 
 export function emptyPayments(): PaymentMap {

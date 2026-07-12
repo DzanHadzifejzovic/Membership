@@ -49,6 +49,8 @@ export function PrintLayout({
                 <div className="print-card-meta">
                   <span>Broj: {member.cardNumber || '—'}</span>
                   <span>Učlanjen: {member.joinDate || '—'}</span>
+                  {member.phone && <span>Telefon: {member.phone}</span>}
+                  {member.address && <span>Adresa: {member.address}</span>}
                 </div>
               </div>
 

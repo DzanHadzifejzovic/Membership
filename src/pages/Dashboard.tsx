@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -19,13 +20,24 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { MemberFormDialog } from '@/components/MemberFormDialog'
 import { PrintLayout } from '@/components/PrintLayout'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMembers } from '@/hooks/useMembers'
+import { softDeleteMember } from '@/firebase/members'
 import { YEARS, paidYearCount, totalPaid, type Member } from '@/types/member'
 
-const DEFAULT_MOSQUE_NAME = 'Naziv džamije'
+const DEFAULT_MOSQUE_NAME = 'Džamija Nur'
 
 export default function Dashboard() {
   const { signOut } = useAuth()
@@ -35,6 +47,8 @@ export default function Dashboard() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const [mosqueName, setMosqueName] = useState(DEFAULT_MOSQUE_NAME)
   const [yearFrom, setYearFrom] = useState(String(YEARS[YEARS.length - 6]))
@@ -88,6 +102,25 @@ export default function Dashboard() {
   function openEditDialog(member: Member) {
     setEditingMember(member)
     setDialogOpen(true)
+  }
+
+  async function confirmDeleteMember() {
+    if (!memberToDelete) return
+    setDeleting(true)
+    try {
+      await softDeleteMember(memberToDelete.id)
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(memberToDelete.id)
+        return next
+      })
+      toast.success('Član je uklonjen.')
+      setMemberToDelete(null)
+    } catch {
+      toast.error('Došlo je do greške prilikom brisanja. Pokušajte ponovo.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   function handlePrint() {
@@ -210,26 +243,27 @@ export default function Dashboard() {
                 <TableHead>Učlanjen</TableHead>
                 <TableHead>Plaćeno godina</TableHead>
                 <TableHead>Ukupno uplaćeno</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     Učitavanje...
                   </TableCell>
                 </TableRow>
               )}
               {error && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-destructive">
+                  <TableCell colSpan={7} className="text-center text-destructive">
                     Greška: {error}
                   </TableCell>
                 </TableRow>
               )}
               {!loading && !error && filteredMembers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     Nema pronađenih članova.
                   </TableCell>
                 </TableRow>
@@ -260,6 +294,16 @@ export default function Dashboard() {
                     </Badge>
                   </TableCell>
                   <TableCell>{totalPaid(member.payments)}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setMemberToDelete(member)}
+                      aria-label={`Obriši ${member.fullName}`}
+                    >
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -284,6 +328,37 @@ export default function Dashboard() {
         cardsPerPage={Number(cardsPerPage) as 4 | 6 | 8}
         mosqueName={mosqueName}
       />
+
+      <AlertDialog
+        open={memberToDelete != null}
+        onOpenChange={(open) => {
+          if (!open) setMemberToDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ukloniti člana?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {memberToDelete && (
+                <>
+                  <strong>{memberToDelete.fullName}</strong> će biti uklonjen(a)
+                  sa liste članova. Podaci i istorija članarina se ne brišu
+                  trajno i mogu se vratiti po potrebi iz baze.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Otkaži</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={confirmDeleteMember}
+            >
+              {deleting ? 'Brisanje...' : 'Ukloni'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
