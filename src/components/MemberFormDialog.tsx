@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -23,10 +24,12 @@ import {
 } from '@/components/ui/select'
 import { FamilyInfoDialog } from '@/components/FamilyInfoDialog'
 import { createMember, updateMember } from '@/firebase/members'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { useYearRange } from '@/hooks/useYearRange'
 import { COUNTRY_CODES, DEFAULT_DIAL_CODE, splitPhone } from '@/lib/countryCodes'
 import {
   buildSearchKey,
+  CURRENCY,
   emptyPayments,
   type FamilyInfo,
   type Member,
@@ -46,7 +49,9 @@ function todayIso(): string {
 }
 
 function hasFamilyInfo(info: FamilyInfo): boolean {
-  return Boolean(info.memberCount || info.ages || info.phones || info.notes)
+  return Boolean(
+    info.memberCount || info.ages || info.phones || info.notes || info.spouseName,
+  )
 }
 
 export function MemberFormDialog({
@@ -57,6 +62,7 @@ export function MemberFormDialog({
   onEditExisting,
 }: MemberFormDialogProps) {
   const isEditing = member != null
+  const { t } = useLanguage()
   const { years } = useYearRange()
 
   const [firstName, setFirstName] = useState('')
@@ -65,6 +71,7 @@ export function MemberFormDialog({
   const [phoneNumber, setPhoneNumber] = useState('')
   const [address, setAddress] = useState('')
   const [joinDate, setJoinDate] = useState(todayIso())
+  const [isRegularMember, setIsRegularMember] = useState(true)
   const [payments, setPayments] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       Object.entries(emptyPayments()).map(([y, v]) => [y, v ? String(v) : '']),
@@ -84,6 +91,7 @@ export function MemberFormDialog({
       setPhoneNumber(number)
       setAddress(member.address)
       setJoinDate(member.joinDate || todayIso())
+      setIsRegularMember(member.isRegularMember ?? true)
       setFamilyInfo(member.familyInfo ?? {})
       setPayments(
         Object.fromEntries(
@@ -102,6 +110,7 @@ export function MemberFormDialog({
       setPhoneNumber('')
       setAddress('')
       setJoinDate(todayIso())
+      setIsRegularMember(true)
       setFamilyInfo({})
       setPayments(Object.fromEntries(years.map((y) => [String(y), ''])))
     }
@@ -122,7 +131,7 @@ export function MemberFormDialog({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!firstName.trim() || !lastName.trim()) {
-      toast.error('Ime i prezime su obavezni.')
+      toast.error(t('memberForm.requiredNameError'))
       return
     }
 
@@ -136,6 +145,7 @@ export function MemberFormDialog({
       phone: phoneNumber.trim() ? `${phoneDialCode} ${phoneNumber.trim()}` : '',
       address: address.trim(),
       joinDate,
+      isRegularMember,
       payments: paymentMap,
       ...(hasFamilyInfo(familyInfo) ? { familyInfo } : {}),
     }
@@ -144,14 +154,14 @@ export function MemberFormDialog({
     try {
       if (isEditing) {
         await updateMember(member.id, input)
-        toast.success('Podaci o članu su ažurirani.')
+        toast.success(t('memberForm.toastUpdated'))
       } else {
         await createMember(input)
-        toast.success('Novi član je dodan.')
+        toast.success(t('memberForm.toastCreated'))
       }
       onOpenChange(false)
     } catch {
-      toast.error('Došlo je do greške prilikom čuvanja. Pokušajte ponovo.')
+      toast.error(t('memberForm.toastSaveError'))
     } finally {
       setSaving(false)
     }
@@ -162,18 +172,20 @@ export function MemberFormDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Uredi člana' : 'Dodaj novog člana'}
+            {isEditing ? t('memberForm.editTitle') : t('memberForm.addTitle')}
           </DialogTitle>
           <DialogDescription>
-            Podaci o članu i cijela tabela članarina ({years[0]}–
-            {years[years.length - 1]}) se čuvaju zajedno.
+            {t('memberForm.description', {
+              from: years[0],
+              to: years[years.length - 1],
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="firstName">Ime</Label>
+              <Label htmlFor="firstName">{t('memberForm.firstName')}</Label>
               <Input
                 id="firstName"
                 value={firstName}
@@ -182,7 +194,7 @@ export function MemberFormDialog({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="lastName">Prezime</Label>
+              <Label htmlFor="lastName">{t('memberForm.lastName')}</Label>
               <Input
                 id="lastName"
                 value={lastName}
@@ -191,15 +203,13 @@ export function MemberFormDialog({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Broj članske karte</Label>
+              <Label>{t('memberForm.cardNumber')}</Label>
               <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm text-muted-foreground">
-                {isEditing
-                  ? member.cardNumber
-                  : 'Biće automatski dodijeljen'}
+                {isEditing ? member.cardNumber : t('memberForm.cardNumberAuto')}
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="joinDate">Datum učlanjenja</Label>
+              <Label htmlFor="joinDate">{t('memberForm.joinDate')}</Label>
               <Input
                 id="joinDate"
                 type="date"
@@ -208,7 +218,7 @@ export function MemberFormDialog({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="phone">Telefon</Label>
+              <Label htmlFor="phone">{t('memberForm.phone')}</Label>
               <div className="flex gap-2">
                 <Select
                   value={phoneDialCode}
@@ -244,20 +254,29 @@ export function MemberFormDialog({
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="address">Adresa</Label>
+              <Label htmlFor="address">{t('memberForm.address')}</Label>
               <Input
                 id="address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
               />
             </div>
+            <div className="flex items-center gap-2 pt-1">
+              <Checkbox
+                id="isRegularMember"
+                checked={isRegularMember}
+                onCheckedChange={(c) => setIsRegularMember(!!c)}
+              />
+              <Label htmlFor="isRegularMember" className="font-normal">
+                {t('memberForm.isRegularMember')}
+              </Label>
+            </div>
           </div>
 
           {duplicate && (
             <div className="flex items-center justify-between gap-3 rounded-md border border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               <span>
-                Član po imenu <strong>{duplicate.fullName}</strong> već
-                postoji. Uredite postojeći zapis umjesto dupliciranja.
+                {t('memberForm.duplicateWarning', { name: duplicate.fullName })}
               </span>
               <Button
                 type="button"
@@ -265,7 +284,7 @@ export function MemberFormDialog({
                 variant="outline"
                 onClick={() => onEditExisting(duplicate)}
               >
-                Uredi postojećeg
+                {t('memberForm.editExisting')}
               </Button>
             </div>
           )}
@@ -279,9 +298,9 @@ export function MemberFormDialog({
               className="gap-2"
             >
               <Users className="size-4" />
-              Podaci o porodici (opciono)
+              {t('memberForm.familyInfoButton')}
               {hasFamilyInfo(familyInfo) && (
-                <Badge variant="secondary">Popunjeno</Badge>
+                <Badge variant="secondary">{t('memberForm.filled')}</Badge>
               )}
             </Button>
           </div>
@@ -290,7 +309,7 @@ export function MemberFormDialog({
 
           <div>
             <p className="mb-3 text-sm font-medium">
-              Članarina po godinama (iznos)
+              {t('memberForm.paymentsTitle', { currency: CURRENCY })}
             </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {years.map((year) => (
@@ -316,10 +335,10 @@ export function MemberFormDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Otkaži
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? 'Čuvanje...' : 'Sačuvaj'}
+              {saving ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </form>

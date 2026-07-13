@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateLastYear } from '@/firebase/settings'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { FIRST_YEAR } from '@/types/member'
 
 interface ExtendYearRangeDialogProps {
@@ -25,6 +26,7 @@ export function ExtendYearRangeDialog({
   onOpenChange,
   currentLastYear,
 }: ExtendYearRangeDialogProps) {
+  const { t } = useLanguage()
   const [newLastYear, setNewLastYear] = useState(String(currentLastYear + 5))
   const [saving, setSaving] = useState(false)
 
@@ -36,17 +38,19 @@ export function ExtendYearRangeDialog({
     e.preventDefault()
     const value = Number(newLastYear)
     if (!Number.isInteger(value) || value <= currentLastYear) {
-      toast.error(`Nova godina mora biti veća od ${currentLastYear}.`)
+      toast.error(
+        t('extendYear.errorMustBeGreater', { current: currentLastYear }),
+      )
       return
     }
 
     setSaving(true)
     try {
       await updateLastYear(value)
-      toast.success(`Period članarine je produžen do ${value}.`)
+      toast.success(t('extendYear.toastExtended', { year: value }))
       onOpenChange(false)
     } catch {
-      toast.error('Došlo je do greške. Pokušajte ponovo.')
+      toast.error(t('extendYear.toastError'))
     } finally {
       setSaving(false)
     }
@@ -56,16 +60,18 @@ export function ExtendYearRangeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Produži period članarine</DialogTitle>
+          <DialogTitle>{t('extendYear.title')}</DialogTitle>
           <DialogDescription>
-            Trenutni period je {FIRST_YEAR}–{currentLastYear}. Ova promjena
-            važi za sve članove i ne briše postojeće podatke.
+            {t('extendYear.description', {
+              from: FIRST_YEAR,
+              to: currentLastYear,
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="newLastYear">Nova zadnja godina</Label>
+            <Label htmlFor="newLastYear">{t('extendYear.newLastYear')}</Label>
             <Input
               id="newLastYear"
               inputMode="numeric"
@@ -83,10 +89,10 @@ export function ExtendYearRangeDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Otkaži
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? 'Čuvanje...' : 'Sačuvaj'}
+              {saving ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </form>

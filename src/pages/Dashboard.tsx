@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronsUpDown, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -33,16 +33,53 @@ import {
 import { MemberFormDialog } from '@/components/MemberFormDialog'
 import { PrintLayout } from '@/components/PrintLayout'
 import { ExtendYearRangeDialog } from '@/components/ExtendYearRangeDialog'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useAuth } from '@/contexts/AuthContext'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { useMembers } from '@/hooks/useMembers'
 import { useYearRange } from '@/hooks/useYearRange'
 import { softDeleteMember } from '@/firebase/members'
-import { FIRST_YEAR, paidYearCount, totalPaid, type Member } from '@/types/member'
+import {
+  FIRST_YEAR,
+  formatAmount,
+  paidYearCount,
+  totalPaid,
+  type Member,
+} from '@/types/member'
 
 const DEFAULT_MOSQUE_NAME = 'Džamija Nur'
+const PAGE_SIZE = 20
+
+type SortKey =
+  | 'fullName'
+  | 'cardNumber'
+  | 'joinDate'
+  | 'isRegularMember'
+  | 'paidYears'
+  | 'totalPaid'
+
+function compareMembers(a: Member, b: Member, key: SortKey): number {
+  switch (key) {
+    case 'fullName':
+      return a.fullName.localeCompare(b.fullName)
+    case 'cardNumber':
+      return a.cardNumber.localeCompare(b.cardNumber)
+    case 'joinDate':
+      return a.joinDate.localeCompare(b.joinDate)
+    case 'isRegularMember':
+      return Number(b.isRegularMember) - Number(a.isRegularMember)
+    case 'paidYears':
+      return paidYearCount(a.payments) - paidYearCount(b.payments)
+    case 'totalPaid':
+      return totalPaid(a.payments) - totalPaid(b.payments)
+    default:
+      return 0
+  }
+}
 
 export default function Dashboard() {
   const { signOut } = useAuth()
+  const { t } = useLanguage()
   const { members, loading, error } = useMembers()
   const { years, lastYear } = useYearRange()
 
@@ -53,9 +90,12 @@ export default function Dashboard() {
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [extendDialogOpen, setExtendDialogOpen] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>('fullName')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [currentPage, setCurrentPage] = useState(1)
 
   const [mosqueName, setMosqueName] = useState(DEFAULT_MOSQUE_NAME)
-  const [yearFrom, setYearFrom] = useState(String(years[years.length - 6]))
+  const [yearFrom, setYearFrom] = useState('2015')
   const [yearTo, setYearTo] = useState(String(years[years.length - 1]))
   const [cardsPerPage, setCardsPerPage] = useState<'4' | '6' | '8'>('8')
 
@@ -68,6 +108,21 @@ export default function Dashboard() {
         m.cardNumber.toLowerCase().includes(term),
     )
   }, [members, search])
+
+  const sortedMembers = useMemo(() => {
+    const arr = [...filteredMembers]
+    arr.sort(
+      (a, b) => compareMembers(a, b, sortKey) * (sortDirection === 'asc' ? 1 : -1),
+    )
+    return arr
+  }, [filteredMembers, sortKey, sortDirection])
+
+  const totalPages = Math.max(1, Math.ceil(sortedMembers.length / PAGE_SIZE))
+  const safePage = Math.min(currentPage, totalPages)
+  const paginatedMembers = useMemo(
+    () => sortedMembers.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [sortedMembers, safePage],
+  )
 
   const selectedMembers = useMemo(
     () => members.filter((m) => selectedIds.has(m.id)),
@@ -98,6 +153,25 @@ export default function Dashboard() {
     })
   }
 
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setCurrentPage(1)
+  }
+
+  function sortIcon(key: SortKey) {
+    if (sortKey !== key) return <ChevronsUpDown className="size-3.5 text-muted-foreground" />
+    return sortDirection === 'asc' ? (
+      <ArrowUp className="size-3.5" />
+    ) : (
+      <ArrowDown className="size-3.5" />
+    )
+  }
+
   function openNewMemberDialog() {
     setEditingMember(null)
     setDialogOpen(true)
@@ -118,10 +192,10 @@ export default function Dashboard() {
         next.delete(memberToDelete.id)
         return next
       })
-      toast.success('Član je uklonjen.')
+      toast.success(t('dashboard.toastMemberDeleted'))
       setMemberToDelete(null)
     } catch {
-      toast.error('Došlo je do greške prilikom brisanja. Pokušajte ponovo.')
+      toast.error(t('dashboard.toastDeleteError'))
     } finally {
       setDeleting(false)
     }
@@ -129,11 +203,11 @@ export default function Dashboard() {
 
   function handlePrint() {
     if (selectedMembers.length === 0) {
-      toast.error('Odaberite barem jednog člana za štampu.')
+      toast.error(t('dashboard.toastSelectAtLeastOne'))
       return
     }
     if (Number(yearFrom) > Number(yearTo)) {
-      toast.error('Period godina nije ispravan.')
+      toast.error(t('dashboard.toastInvalidYearRange'))
       return
     }
     window.print()
@@ -143,30 +217,38 @@ export default function Dashboard() {
     <div className="min-h-svh bg-muted/30">
       <header className="print:hidden border-b bg-background">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <h1 className="text-lg font-semibold">Evidencija članarina</h1>
-          <Button variant="outline" onClick={signOut}>
-            Log out
-          </Button>
+          <h1 className="text-lg font-semibold">{t('dashboard.headerTitle')}</h1>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <Button variant="outline" onClick={signOut}>
+              {t('dashboard.logout')}
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="print:hidden mx-auto max-w-6xl px-4 py-6">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Input
-            placeholder="Pretraga po imenu ili broju kartice..."
+            placeholder={t('dashboard.searchPlaceholder')}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setCurrentPage(1)
+            }}
             className="sm:max-w-xs"
           />
-          <Button onClick={openNewMemberDialog}>Dodaj novog člana</Button>
+          <Button onClick={openNewMemberDialog}>{t('dashboard.addMember')}</Button>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4">
           <div>
-            <p className="text-sm font-medium">Period članarine</p>
+            <p className="text-sm font-medium">{t('dashboard.periodTitle')}</p>
             <p className="text-xs text-muted-foreground">
-              Trenutno se članarina može evidentirati od {FIRST_YEAR}. do{' '}
-              {lastYear}. godine.
+              {t('dashboard.periodDescription', {
+                from: FIRST_YEAR,
+                to: lastYear,
+              })}
             </p>
           </div>
           <Button
@@ -175,13 +257,15 @@ export default function Dashboard() {
             size="sm"
             onClick={() => setExtendDialogOpen(true)}
           >
-            Produži period
+            {t('dashboard.extendPeriod')}
           </Button>
         </div>
 
         <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-background p-4">
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Naziv džamije</span>
+            <span className="text-xs text-muted-foreground">
+              {t('dashboard.mosqueName')}
+            </span>
             <Input
               value={mosqueName}
               onChange={(e) => setMosqueName(e.target.value)}
@@ -189,7 +273,9 @@ export default function Dashboard() {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Od godine</span>
+            <span className="text-xs text-muted-foreground">
+              {t('dashboard.yearFrom')}
+            </span>
             <Select
               value={yearFrom}
               onValueChange={(v) => v && setYearFrom(v)}
@@ -207,7 +293,9 @@ export default function Dashboard() {
             </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Do godine</span>
+            <span className="text-xs text-muted-foreground">
+              {t('dashboard.yearTo')}
+            </span>
             <Select value={yearTo} onValueChange={(v) => v && setYearTo(v)}>
               <SelectTrigger className="w-24">
                 <SelectValue />
@@ -223,7 +311,7 @@ export default function Dashboard() {
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">
-              Kartica po stranici
+              {t('dashboard.cardsPerPage')}
             </span>
             <Select
               value={cardsPerPage}
@@ -245,7 +333,7 @@ export default function Dashboard() {
             disabled={selectedMembers.length === 0}
             className="ml-auto"
           >
-            Štampaj odabrane ({selectedMembers.length})
+            {t('dashboard.printSelected', { count: selectedMembers.length })}
           </Button>
         </div>
 
@@ -257,40 +345,89 @@ export default function Dashboard() {
                   <Checkbox
                     checked={allFilteredSelected}
                     onCheckedChange={(c) => toggleSelectAllFiltered(!!c)}
-                    aria-label="Odaberi sve"
+                    aria-label={t('dashboard.selectAllAria')}
                   />
                 </TableHead>
-                <TableHead>Ime i prezime</TableHead>
-                <TableHead>Broj kartice</TableHead>
-                <TableHead>Učlanjen</TableHead>
-                <TableHead>Plaćeno godina</TableHead>
-                <TableHead>Ukupno uplaćeno</TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 hover:text-foreground"
+                    onClick={() => handleSort('fullName')}
+                  >
+                    {t('dashboard.colName')} {sortIcon('fullName')}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 hover:text-foreground"
+                    onClick={() => handleSort('cardNumber')}
+                  >
+                    {t('dashboard.colCardNumber')} {sortIcon('cardNumber')}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 hover:text-foreground"
+                    onClick={() => handleSort('joinDate')}
+                  >
+                    {t('dashboard.colJoined')} {sortIcon('joinDate')}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 hover:text-foreground"
+                    onClick={() => handleSort('isRegularMember')}
+                  >
+                    {t('dashboard.colStatus')} {sortIcon('isRegularMember')}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 hover:text-foreground"
+                    onClick={() => handleSort('paidYears')}
+                  >
+                    {t('dashboard.colPaidYears')} {sortIcon('paidYears')}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 hover:text-foreground"
+                    onClick={() => handleSort('totalPaid')}
+                  >
+                    {t('dashboard.colTotalPaid')} {sortIcon('totalPaid')}
+                  </button>
+                </TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Učitavanje...
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    {t('common.loading')}
                   </TableCell>
                 </TableRow>
               )}
               {error && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-destructive">
-                    Greška: {error}
+                  <TableCell colSpan={8} className="text-center text-destructive">
+                    {error}
                   </TableCell>
                 </TableRow>
               )}
               {!loading && !error && filteredMembers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Nema pronađenih članova.
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    {t('dashboard.noResults')}
                   </TableCell>
                 </TableRow>
               )}
-              {filteredMembers.map((member) => (
+              {paginatedMembers.map((member) => (
                 <TableRow
                   key={member.id}
                   className="cursor-pointer"
@@ -302,7 +439,9 @@ export default function Dashboard() {
                       onCheckedChange={(c) =>
                         toggleSelected(member.id, !!c)
                       }
-                      aria-label={`Odaberi ${member.fullName}`}
+                      aria-label={t('dashboard.selectAria', {
+                        name: member.fullName,
+                      })}
                     />
                   </TableCell>
                   <TableCell className="font-medium">
@@ -311,17 +450,26 @@ export default function Dashboard() {
                   <TableCell>{member.cardNumber || '—'}</TableCell>
                   <TableCell>{member.joinDate || '—'}</TableCell>
                   <TableCell>
+                    <Badge variant={member.isRegularMember ? 'default' : 'outline'}>
+                      {member.isRegularMember
+                        ? t('dashboard.statusRegular')
+                        : t('dashboard.statusIrregular')}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
                     <Badge variant="secondary">
                       {paidYearCount(member.payments)} / {years.length}
                     </Badge>
                   </TableCell>
-                  <TableCell>{totalPaid(member.payments)}</TableCell>
+                  <TableCell>{formatAmount(totalPaid(member.payments))}</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       onClick={() => setMemberToDelete(member)}
-                      aria-label={`Obriši ${member.fullName}`}
+                      aria-label={t('dashboard.deleteAria', {
+                        name: member.fullName,
+                      })}
                     >
                       <Trash2 className="size-4 text-destructive" />
                     </Button>
@@ -331,6 +479,34 @@ export default function Dashboard() {
             </TableBody>
           </Table>
         </div>
+
+        {sortedMembers.length > 0 && (
+          <div className="mt-3 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              {t('dashboard.pageOf', { page: safePage, total: totalPages })}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={safePage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              >
+                {t('dashboard.previousPage')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={safePage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              >
+                {t('dashboard.nextPage')}
+              </Button>
+            </div>
+          </div>
+        )}
       </main>
 
       <MemberFormDialog
@@ -359,24 +535,21 @@ export default function Dashboard() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ukloniti člana?</AlertDialogTitle>
+            <AlertDialogTitle>{t('dashboard.deleteDialogTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {memberToDelete && (
-                <>
-                  <strong>{memberToDelete.fullName}</strong> će biti uklonjen(a)
-                  sa liste članova. Podaci i istorija članarina se ne brišu
-                  trajno i mogu se vratiti po potrebi iz baze.
-                </>
-              )}
+              {memberToDelete &&
+                t('dashboard.deleteDialogDescription', {
+                  name: memberToDelete.fullName,
+                })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Otkaži</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               disabled={deleting}
               onClick={confirmDeleteMember}
             >
-              {deleting ? 'Brisanje...' : 'Ukloni'}
+              {deleting ? t('dashboard.deleting') : t('dashboard.deleteConfirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

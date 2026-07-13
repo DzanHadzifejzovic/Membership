@@ -5,26 +5,29 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
-function firebaseAuthErrorMessage(code: string): string {
+function firebaseAuthErrorKey(code: string): string {
   switch (code) {
     case 'auth/invalid-email':
-      return 'Neispravna email adresa.'
+      return 'login.error.invalidEmail'
     case 'auth/user-disabled':
-      return 'Ovaj nalog je onemogućen.'
+      return 'login.error.userDisabled'
     case 'auth/user-not-found':
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
-      return 'Pogrešan email ili lozinka.'
+      return 'login.error.wrongCredentials'
     case 'auth/too-many-requests':
-      return 'Previše pokušaja. Pokušajte ponovo kasnije.'
+      return 'login.error.tooManyRequests'
     default:
-      return 'Prijava nije uspjela. Pokušajte ponovo.'
+      return 'login.error.generic'
   }
 }
 
 export default function Login() {
   const { user, loading, signIn } = useAuth()
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -47,25 +50,28 @@ export default function Login() {
       navigate('/', { replace: true })
     } catch (err) {
       const code = (err as { code?: string }).code ?? ''
-      setError(firebaseAuthErrorMessage(code))
+      setError(t(firebaseAuthErrorKey(code)))
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted/40 p-4">
+    <div className="relative flex min-h-svh items-center justify-center bg-muted/40 p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">Prijava</CardTitle>
+          <CardTitle className="text-xl">{t('login.title')}</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Evidencija članarina — prijavite se svojim nalogom.
+            {t('login.subtitle')}
           </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('login.email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -77,7 +83,7 @@ export default function Login() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Lozinka</Label>
+              <Label htmlFor="password">{t('login.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -90,7 +96,7 @@ export default function Login() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" disabled={submitting} className="mt-2">
-              {submitting ? 'Logging in...' : 'Log in'}
+              {submitting ? t('login.submitting') : t('login.submit')}
             </Button>
           </form>
         </CardContent>
