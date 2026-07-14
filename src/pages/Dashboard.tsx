@@ -80,7 +80,7 @@ function compareMembers(a: Member, b: Member, key: SortKey): number {
 }
 
 export default function Dashboard() {
-  const { signOut } = useAuth()
+  const { signOut, isAdmin } = useAuth()
   const { t } = useLanguage()
   const { members, loading, error } = useMembers()
   const { years, lastYear } = useYearRange()
@@ -270,36 +270,38 @@ export default function Dashboard() {
           <Button onClick={openNewMemberDialog}>{t('dashboard.addMember')}</Button>
         </div>
 
-        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border bg-background p-4">
-            <p className="text-xs text-muted-foreground">
-              {t('dashboard.summaryAllTime')}
-            </p>
-            <p className="mt-1 text-xl font-semibold">
-              {formatAmount(summary.allTime)}
-            </p>
+        {isAdmin && (
+          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border bg-background p-4">
+              <p className="text-xs text-muted-foreground">
+                {t('dashboard.summaryAllTime')}
+              </p>
+              <p className="mt-1 text-xl font-semibold">
+                {formatAmount(summary.allTime)}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-background p-4">
+              <p className="text-xs text-muted-foreground">
+                {t('dashboard.summaryCurrentYear', { year: currentYear })}
+              </p>
+              <p className="mt-1 text-xl font-semibold">
+                {formatAmount(summary.currentYearTotal)}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-background p-4">
+              <p className="text-xs text-muted-foreground">
+                {t('dashboard.summaryStatus')}
+              </p>
+              <p className="mt-1 text-xl font-semibold">
+                <span className="text-foreground">{summary.regularCount}</span>
+                <span className="text-muted-foreground"> / </span>
+                <span className="text-muted-foreground">
+                  {summary.irregularCount}
+                </span>
+              </p>
+            </div>
           </div>
-          <div className="rounded-lg border bg-background p-4">
-            <p className="text-xs text-muted-foreground">
-              {t('dashboard.summaryCurrentYear', { year: currentYear })}
-            </p>
-            <p className="mt-1 text-xl font-semibold">
-              {formatAmount(summary.currentYearTotal)}
-            </p>
-          </div>
-          <div className="rounded-lg border bg-background p-4">
-            <p className="text-xs text-muted-foreground">
-              {t('dashboard.summaryStatus')}
-            </p>
-            <p className="mt-1 text-xl font-semibold">
-              <span className="text-foreground">{summary.regularCount}</span>
-              <span className="text-muted-foreground"> / </span>
-              <span className="text-muted-foreground">
-                {summary.irregularCount}
-              </span>
-            </p>
-          </div>
-        </div>
+        )}
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4">
           <div>
@@ -462,27 +464,27 @@ export default function Dashboard() {
                     {t('dashboard.colTotalPaid')} {sortIcon('totalPaid')}
                   </button>
                 </TableHead>
-                <TableHead className="w-10" />
+                {isAdmin && <TableHead className="w-10" />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={isAdmin ? 8 : 7} className="text-center text-muted-foreground">
                     {t('common.loading')}
                   </TableCell>
                 </TableRow>
               )}
               {error && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-destructive">
+                  <TableCell colSpan={isAdmin ? 8 : 7} className="text-center text-destructive">
                     {error}
                   </TableCell>
                 </TableRow>
               )}
               {!loading && !error && filteredMembers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={isAdmin ? 8 : 7} className="text-center text-muted-foreground">
                     {t('dashboard.noResults')}
                   </TableCell>
                 </TableRow>
@@ -522,18 +524,20 @@ export default function Dashboard() {
                     </Badge>
                   </TableCell>
                   <TableCell>{formatAmount(totalPaid(member.payments))}</TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setMemberToDelete(member)}
-                      aria-label={t('dashboard.deleteAria', {
-                        name: member.fullName,
-                      })}
-                    >
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </TableCell>
+                  {isAdmin && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setMemberToDelete(member)}
+                        aria-label={t('dashboard.deleteAria', {
+                          name: member.fullName,
+                        })}
+                      >
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -544,7 +548,7 @@ export default function Dashboard() {
                     {t('dashboard.footerTotalLabel')}
                   </TableCell>
                   <TableCell>{formatAmount(filteredTotalPaid)}</TableCell>
-                  <TableCell />
+                  {isAdmin && <TableCell />}
                 </TableRow>
               </TableFooter>
             )}

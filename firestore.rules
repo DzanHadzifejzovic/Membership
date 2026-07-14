@@ -3,11 +3,32 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/roles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Role assignments — read-only for the matching user, never writable
+    // from the client. The site owner creates/edits these documents
+    // directly in the Firebase console (collection "roles", document ID =
+    // the user's UID, field "role" = "admin" or "worker").
+    match /roles/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
     // Members are managed by staff only. There is no public sign-up in this
     // app — accounts are created manually in the Firebase Auth console, so
-    // any authenticated user is trusted staff.
+    // any authenticated user is trusted staff. Soft-deleting a member (any
+    // write that sets deleted == true) is restricted to admins; all other
+    // creates/updates (adding members, editing payments, etc.) remain open
+    // to every authenticated user.
     match /members/{memberId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null &&
+        (request.resource.data.deleted != true || isAdmin());
     }
 
     // Shared counter used to assign sequential card numbers.
