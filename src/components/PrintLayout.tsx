@@ -7,6 +7,7 @@ interface PrintLayoutProps {
   yearTo: number
   cardsPerPage: 4 | 6 | 8
   mosqueName: string
+  logoUrl: string
 }
 
 // Cycled by column position, purely decorative (matches the reference card
@@ -35,6 +36,7 @@ export function PrintLayout({
   yearTo,
   cardsPerPage,
   mosqueName,
+  logoUrl,
 }: PrintLayoutProps) {
   const { t } = useLanguage()
   const years = Array.from(
@@ -55,6 +57,7 @@ export function PrintLayout({
             <div key={member.id} className="print-card">
               <div className="print-card-header">
                 <span className="print-card-mosque">{mosqueName}</span>
+                <img src={logoUrl} alt="" className="print-card-logo" />
               </div>
 
               <div className="print-card-body">

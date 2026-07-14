@@ -191,6 +191,10 @@
 }
 
 .print-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2mm;
   border-bottom: 0.5pt solid #d8c39a;
   padding-bottom: 1.5mm;
   margin-bottom: 1.5mm;
@@ -202,6 +206,13 @@
   letter-spacing: 0.3pt;
   text-transform: uppercase;
   color: #8a6d3b;
+}
+
+.print-card-logo {
+  height: 9mm;
+  width: auto;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .print-card-body {
@@ -228,11 +239,9 @@
 }
 
 .print-year-grid {
-  flex: 1;
-  min-height: 0;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  grid-auto-rows: 1fr;
+  grid-auto-rows: 9mm;
   gap: 1mm;
 }
 

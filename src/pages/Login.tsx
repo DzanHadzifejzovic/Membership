@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import logo from '@/assets/logo.png'
 
 function firebaseAuthErrorKey(code: string): string {
   switch (code) {
@@ -62,7 +63,8 @@ export default function Login() {
         <LanguageSwitcher />
       </div>
       <Card className="w-full max-w-sm">
-        <CardHeader>
+        <CardHeader className="items-center text-center">
+          <img src={logo} alt="Dzemat Nur Ebikon" className="mb-2 h-20 w-auto" />
           <CardTitle className="text-xl">{t('login.title')}</CardTitle>
           <p className="text-sm text-muted-foreground">
             {t('login.subtitle')}

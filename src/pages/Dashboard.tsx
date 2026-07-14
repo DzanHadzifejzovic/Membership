@@ -16,6 +16,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -46,8 +47,9 @@ import {
   totalPaid,
   type Member,
 } from '@/types/member'
+import logoIcon from '@/assets/logo-icon.png'
 
-const DEFAULT_MOSQUE_NAME = 'Džamija Nur'
+const DEFAULT_MOSQUE_NAME = 'Dzemat Nur Ebikon'
 const PAGE_SIZE = 20
 
 type SortKey =
@@ -124,10 +126,32 @@ export default function Dashboard() {
     [sortedMembers, safePage],
   )
 
+  // Derived from sortedMembers (not the raw Firestore order) so printed
+  // cards follow whatever order is currently shown on screen.
   const selectedMembers = useMemo(
-    () => members.filter((m) => selectedIds.has(m.id)),
-    [members, selectedIds],
+    () => sortedMembers.filter((m) => selectedIds.has(m.id)),
+    [sortedMembers, selectedIds],
   )
+
+  const filteredTotalPaid = useMemo(
+    () => filteredMembers.reduce((sum, m) => sum + totalPaid(m.payments), 0),
+    [filteredMembers],
+  )
+
+  const currentYear = new Date().getFullYear()
+  const summary = useMemo(() => {
+    let allTime = 0
+    let currentYearTotal = 0
+    let regularCount = 0
+    let irregularCount = 0
+    for (const m of members) {
+      allTime += totalPaid(m.payments)
+      currentYearTotal += m.payments?.[String(currentYear)] ?? 0
+      if (m.isRegularMember) regularCount++
+      else irregularCount++
+    }
+    return { allTime, currentYearTotal, regularCount, irregularCount }
+  }, [members, currentYear])
 
   const allFilteredSelected =
     filteredMembers.length > 0 &&
@@ -216,8 +240,13 @@ export default function Dashboard() {
   return (
     <div className="min-h-svh bg-muted/30">
       <header className="print:hidden border-b bg-background">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <h1 className="text-lg font-semibold">{t('dashboard.headerTitle')}</h1>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+          <div className="flex items-center gap-2">
+            <img src={logoIcon} alt="" className="h-9 w-auto" />
+            <h1 className="text-base font-semibold sm:text-lg">
+              {t('dashboard.headerTitle')}
+            </h1>
+          </div>
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
             <Button variant="outline" onClick={signOut}>
@@ -239,6 +268,37 @@ export default function Dashboard() {
             className="sm:max-w-xs"
           />
           <Button onClick={openNewMemberDialog}>{t('dashboard.addMember')}</Button>
+        </div>
+
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border bg-background p-4">
+            <p className="text-xs text-muted-foreground">
+              {t('dashboard.summaryAllTime')}
+            </p>
+            <p className="mt-1 text-xl font-semibold">
+              {formatAmount(summary.allTime)}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-background p-4">
+            <p className="text-xs text-muted-foreground">
+              {t('dashboard.summaryCurrentYear', { year: currentYear })}
+            </p>
+            <p className="mt-1 text-xl font-semibold">
+              {formatAmount(summary.currentYearTotal)}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-background p-4">
+            <p className="text-xs text-muted-foreground">
+              {t('dashboard.summaryStatus')}
+            </p>
+            <p className="mt-1 text-xl font-semibold">
+              <span className="text-foreground">{summary.regularCount}</span>
+              <span className="text-muted-foreground"> / </span>
+              <span className="text-muted-foreground">
+                {summary.irregularCount}
+              </span>
+            </p>
+          </div>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4">
@@ -477,6 +537,17 @@ export default function Dashboard() {
                 </TableRow>
               ))}
             </TableBody>
+            {filteredMembers.length > 0 && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={6} className="text-right">
+                    {t('dashboard.footerTotalLabel')}
+                  </TableCell>
+                  <TableCell>{formatAmount(filteredTotalPaid)}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
         </div>
 
@@ -525,6 +596,7 @@ export default function Dashboard() {
         yearTo={Number(yearTo)}
         cardsPerPage={Number(cardsPerPage) as 4 | 6 | 8}
         mosqueName={mosqueName}
+        logoUrl={logoIcon}
       />
 
       <AlertDialog
