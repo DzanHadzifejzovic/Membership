@@ -263,6 +263,7 @@
 }
 
 .print-year-box-amount {
+  min-height: 3.6mm;
   font-size: 8.5pt;
   font-weight: 700;
   color: #111;

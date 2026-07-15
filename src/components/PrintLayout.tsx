@@ -88,9 +88,9 @@ export function PrintLayout({
                       <div className="print-year-number" style={{ color }}>
                         {year}
                       </div>
-                      {paid && (
-                        <div className="print-year-box-amount">{amount}</div>
-                      )}
+                      <div className="print-year-box-amount">
+                        {paid ? amount : ''}
+                      </div>
                     </div>
                   )
                 })}
