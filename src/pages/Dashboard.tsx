@@ -257,19 +257,6 @@ export default function Dashboard() {
       </header>
 
       <main className="print:hidden mx-auto max-w-6xl px-4 py-6">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Input
-            placeholder={t('dashboard.searchPlaceholder')}
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setCurrentPage(1)
-            }}
-            className="sm:max-w-xs"
-          />
-          <Button onClick={openNewMemberDialog}>{t('dashboard.addMember')}</Button>
-        </div>
-
         {isAdmin && (
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-lg border bg-background p-4">
@@ -397,6 +384,19 @@ export default function Dashboard() {
           >
             {t('dashboard.printSelected', { count: selectedMembers.length })}
           </Button>
+        </div>
+
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Input
+            placeholder={t('dashboard.searchPlaceholder')}
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="sm:max-w-xs"
+          />
+          <Button onClick={openNewMemberDialog}>{t('dashboard.addMember')}</Button>
         </div>
 
         <div className="overflow-x-auto rounded-lg border bg-background">

@@ -71,7 +71,7 @@ export function FamilyInfoDialog({
             <Label htmlFor="spouseName">{t('familyInfo.spouseName')}</Label>
             <Input
               id="spouseName"
-              placeholder="npr. Amela Hadžifejzović"
+              placeholder="npr. Amela Rujevic"
               value={spouseName}
               onChange={(e) => setSpouseName(e.target.value)}
             />
